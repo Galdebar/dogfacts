@@ -6,11 +6,16 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectReader;
 import lt.galdebar.dogfacts.domain.Fact;
+import lt.galdebar.dogfacts.domain.external.FactWithDates;
+import lt.galdebar.dogfacts.domain.external.FactWithUser;
+import lt.galdebar.dogfacts.services.adapters.FactWithDatesAdapter;
+import lt.galdebar.dogfacts.services.adapters.FactWithUserAdapter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -22,7 +27,6 @@ public class FactService {
     private final String RANDOM_SUFFIX = "random";
     private final String ANIMAL_TYPE_PARAMETER = "?animal_type=dog";
     private final String AMOUNT_PARAMETER = "&amount=";
-    private final Integer MIN_RESPONSE_COUNT = 1;
     private final Integer MAX_RESPONSE_COUNT = 500;
 
     @Autowired
@@ -31,25 +35,34 @@ public class FactService {
     @Autowired
     private ObjectMapper objectMapper;
 
+    private final FactWithDatesAdapter factWithDatesAdapter = new FactWithDatesAdapter();
+    private final FactWithUserAdapter factWithUserAdapter = new FactWithUserAdapter();
+
+
     public List<Fact> getQueuedFacts() {
-        List<Fact> returnList = new ArrayList<>();
+        List<FactWithUser> factsToReturn = new ArrayList<>();
+
         ResponseEntity<String> responseString = restTemplate.getForEntity(
                 DEFAULT_URL + ANIMAL_TYPE_PARAMETER,
                 String.class
         );
 
         try {
-            JsonNode response = objectMapper.readTree(responseString.getBody());
-            returnList = parseResponseWithUserObject(response);
-            return returnList;
+            JsonNode responseNode = objectMapper.readTree(responseString.getBody());
+            ObjectReader reader = objectMapper.readerFor(new TypeReference<List<FactWithUser>>() {
+            });
+            factsToReturn = reader.readValue(responseNode.get("all"));
         } catch (Exception e) {
             e.printStackTrace();
-            return returnList;
+            return factWithUserAdapter.convertToFact(factsToReturn);
         }
+        return factWithUserAdapter.convertToFact(factsToReturn);
     }
 
+
     public Fact getRandomFact() {
-        return restTemplate.getForObject(DEFAULT_URL + RANDOM_SUFFIX + ANIMAL_TYPE_PARAMETER, Fact.class);
+        FactWithDates factWithDates= restTemplate.getForObject(DEFAULT_URL + RANDOM_SUFFIX + ANIMAL_TYPE_PARAMETER, FactWithDates.class);
+        return factWithDatesAdapter.convertToFact(factWithDates);
     }
 
     public List<Fact> getRandomFact(Integer amount) {
@@ -64,27 +77,18 @@ public class FactService {
     }
 
     public Fact getFactByID(String factID) {
-        Fact retrievedFact = restTemplate.getForObject(DEFAULT_URL + factID, Fact.class);
-        return retrievedFact;
+        FactWithDates retrievedFactWithDates = restTemplate.getForObject(DEFAULT_URL + factID, FactWithDates.class);
+        return factWithDatesAdapter.convertToFact(retrievedFactWithDates);
     }
 
     private List<Fact> getRandomList(Integer amount) {
-        ResponseEntity<Fact[]> responseEntity = restTemplate.getForEntity(
+        ResponseEntity<FactWithDates[]> responseEntity = restTemplate.getForEntity(
                 DEFAULT_URL + RANDOM_SUFFIX + ANIMAL_TYPE_PARAMETER + AMOUNT_PARAMETER + amount,
-                Fact[].class
+                FactWithDates[].class
         );
-        Fact[] facts = responseEntity.getBody();
-        return Arrays.asList(facts);
-    }
-
-    private List<Fact> parseResponseWithUserObject(JsonNode response){
-        List<Fact> facts = new ArrayList<>();
-        JsonNode factsListNode = response.get("all");
-        factsListNode.forEach(node -> {
-            String id = node.get("_id").textValue();
-            Fact foundFact = getFactByID(id);
-            facts.add(foundFact);
-        });
-        return facts;
+        FactWithDates[] factWithDates = responseEntity.getBody();
+        return factWithDatesAdapter.convertToFact(
+                Arrays.asList(factWithDates)
+        );
     }
 }

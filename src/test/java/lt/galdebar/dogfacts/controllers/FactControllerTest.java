@@ -1,11 +1,9 @@
 package lt.galdebar.dogfacts.controllers;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import lt.galdebar.dogfacts.domain.Fact;
-import org.junit.jupiter.api.BeforeAll;
+import lt.galdebar.dogfacts.domain.external.FactWithDates;
+import lt.galdebar.dogfacts.domain.external.FactWithUser;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -15,11 +13,8 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.util.List;
 import java.util.Random;
 
-import static org.hamcrest.Matchers.containsString;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest
@@ -72,12 +67,12 @@ class FactControllerTest {
                 .andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString();
 
-        List<Fact> actualFact = objectMapper.readValue(response, objectMapper.getTypeFactory().constructCollectionType(List.class, Fact.class));
+        List<Fact> actualFacts = objectMapper.readValue(response, objectMapper.getTypeFactory().constructCollectionType(List.class, Fact.class));
 
         assertNotNull(response);
         assertTrue(!response.trim().isEmpty());
-        assertNotNull(actualFact);
-        assertTrue(actualFact.size() <= expectedCount); // Smaller, because there aren't that many dog facts, so amount might not reach max
+        assertNotNull(actualFacts);
+        assertTrue(actualFacts.size() <= expectedCount); // Smaller, because there aren't that many dog facts, so amount might not reach max
     }
 
     @Test
@@ -87,12 +82,12 @@ class FactControllerTest {
                 .andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString();
 
-        Fact actualFact = objectMapper.readValue(response, Fact.class);
+        Fact actualFactWithDates = objectMapper.readValue(response, Fact.class);
 
         assertNotNull(response);
         assertTrue(!response.trim().isEmpty());
-        assertNotNull(actualFact);
-        assertTrue(!actualFact.getText().trim().isEmpty());
+        assertNotNull(actualFactWithDates);
+        assertTrue(!actualFactWithDates.getText().trim().isEmpty());
     }
 
     @Test
@@ -104,12 +99,12 @@ class FactControllerTest {
                 .andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString();
 
-        List<Fact> actualFact = objectMapper.readValue(response, objectMapper.getTypeFactory().constructCollectionType(List.class, Fact.class));
+        List<Fact> actualFacts = objectMapper.readValue(response, objectMapper.getTypeFactory().constructCollectionType(List.class, Fact.class));
 
         assertNotNull(response);
         assertTrue(!response.trim().isEmpty());
-        assertNotNull(actualFact);
-        assertTrue(actualFact.size() <= maxFacts);
+        assertNotNull(actualFacts);
+        assertTrue(actualFacts.size() <= maxFacts);
 
     }
 
@@ -140,35 +135,18 @@ class FactControllerTest {
                 .andExpect(status().isNotFound());
     }
 
-//    @Test
-//    public void givenEmptyID_whenGetFactByID_thenReturnRandomFact() throws Exception {
-//        String response = mockMvc.perform(get("/facts/" + ""))
-//                .andExpect(status().isOk())
-//                .andReturn().getResponse().getContentAsString();
-//
-//        Fact actualFact = objectMapper.readValue(response, Fact.class);
-//
-//        assertNotNull(response);
-//        assertTrue(!response.trim().isEmpty());
-//        assertNotNull(actualFact);
-//        assertTrue(!actualFact.getText().trim().isEmpty());
-//    }
-
     @Test
     public void givenBlankID_whenGetFactByID_thenReturnRandomFact() throws Exception {
         String response = mockMvc.perform(get("/facts/" + "    "))
                 .andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString();
 
-        Fact actualFact = objectMapper.readValue(response, Fact.class);
+        FactWithDates actualFact = objectMapper.readValue(response, FactWithDates.class);
 
         assertNotNull(response);
         assertTrue(!response.trim().isEmpty());
         assertNotNull(actualFact);
         assertTrue(!actualFact.getText().trim().isEmpty());
     }
-
-
-    //get queued facts
 
 }
