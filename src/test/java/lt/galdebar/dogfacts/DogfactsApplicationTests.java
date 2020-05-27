@@ -1,5 +1,6 @@
 package lt.galdebar.dogfacts;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lt.galdebar.dogfacts.controllers.FactController;
 import lt.galdebar.dogfacts.services.FactService;
 import org.junit.jupiter.api.Test;
@@ -18,10 +19,14 @@ class DogfactsApplicationTests {
 	@Autowired
 	private FactService factService;
 
+	@Autowired
+	private ObjectMapper objectMapper;
+
 	@Test
 	void contextLoads() {
 		notNull(factController,"facts controller up");
 		notNull(factService,"facts service up");
+		notNull(objectMapper,"object mapper up");
 	}
 
 }
