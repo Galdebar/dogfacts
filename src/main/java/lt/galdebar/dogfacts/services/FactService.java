@@ -8,6 +8,7 @@ import com.fasterxml.jackson.databind.ObjectReader;
 import lt.galdebar.dogfacts.domain.Fact;
 import lt.galdebar.dogfacts.domain.external.FactWithDates;
 import lt.galdebar.dogfacts.domain.external.FactWithUser;
+import lt.galdebar.dogfacts.services.Exceptions.FailedToRetrieveResource;
 import lt.galdebar.dogfacts.services.adapters.FactWithDatesAdapter;
 import lt.galdebar.dogfacts.services.adapters.FactWithUserAdapter;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -39,7 +40,7 @@ public class FactService {
     private final FactWithUserAdapter factWithUserAdapter = new FactWithUserAdapter();
 
 
-    public List<Fact> getQueuedFacts() {
+    public List<Fact> getQueuedFacts() throws FailedToRetrieveResource, IOException {
         List<FactWithUser> factsToReturn = new ArrayList<>();
 
         ResponseEntity<String> responseString = restTemplate.getForEntity(
@@ -47,25 +48,24 @@ public class FactService {
                 String.class
         );
 
-        try {
-            JsonNode responseNode = objectMapper.readTree(responseString.getBody());
-            ObjectReader reader = objectMapper.readerFor(new TypeReference<List<FactWithUser>>() {
-            });
-            factsToReturn = reader.readValue(responseNode.get("all"));
-        } catch (Exception e) {
-            e.printStackTrace();
-            return factWithUserAdapter.convertToFact(factsToReturn);
-        }
+        checkIfFalid(responseString);
+
+        JsonNode responseNode = objectMapper.readTree(responseString.getBody());
+        ObjectReader reader = objectMapper.readerFor(new TypeReference<List<FactWithUser>>() {
+        });
+        factsToReturn = reader.readValue(responseNode.get("all"));
+
         return factWithUserAdapter.convertToFact(factsToReturn);
     }
 
 
-    public Fact getRandomFact() {
-        FactWithDates factWithDates= restTemplate.getForObject(DEFAULT_URL + RANDOM_SUFFIX + ANIMAL_TYPE_PARAMETER, FactWithDates.class);
+    public Fact getRandomFact() throws FailedToRetrieveResource {
+        FactWithDates factWithDates = restTemplate.getForObject(DEFAULT_URL + RANDOM_SUFFIX + ANIMAL_TYPE_PARAMETER, FactWithDates.class);
+        checkIfFalid(factWithDates);
         return factWithDatesAdapter.convertToFact(factWithDates);
     }
 
-    public List<Fact> getRandomFact(Integer amount) {
+    public List<Fact> getRandomFact(Integer amount) throws FailedToRetrieveResource {
         if (amount <= 1) {
             return List.of(getRandomFact());
         }
@@ -76,19 +76,27 @@ public class FactService {
         return getRandomList(amount);
     }
 
-    public Fact getFactByID(String factID) {
+    public Fact getFactByID(String factID) throws FailedToRetrieveResource {
         FactWithDates retrievedFactWithDates = restTemplate.getForObject(DEFAULT_URL + factID, FactWithDates.class);
+        checkIfFalid(retrievedFactWithDates);
         return factWithDatesAdapter.convertToFact(retrievedFactWithDates);
     }
 
-    private List<Fact> getRandomList(Integer amount) {
+    private List<Fact> getRandomList(Integer amount) throws FailedToRetrieveResource {
         ResponseEntity<FactWithDates[]> responseEntity = restTemplate.getForEntity(
                 DEFAULT_URL + RANDOM_SUFFIX + ANIMAL_TYPE_PARAMETER + AMOUNT_PARAMETER + amount,
                 FactWithDates[].class
         );
-        FactWithDates[] factWithDates = responseEntity.getBody();
+        checkIfFalid(responseEntity);
+        FactWithDates[] factsWithDates = responseEntity.getBody();
         return factWithDatesAdapter.convertToFact(
-                Arrays.asList(factWithDates)
+                Arrays.asList(factsWithDates)
         );
+    }
+
+    private void checkIfFalid(Object object) throws FailedToRetrieveResource {
+        if(object == null){
+            throw new FailedToRetrieveResource();
+        }
     }
 }
