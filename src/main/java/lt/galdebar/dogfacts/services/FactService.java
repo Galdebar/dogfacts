@@ -1,72 +1,55 @@
 package lt.galdebar.dogfacts.services;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.ObjectReader;
+import lombok.RequiredArgsConstructor;
 import lt.galdebar.dogfacts.domain.Fact;
-import lt.galdebar.dogfacts.domain.external.FactWithDates;
-import lt.galdebar.dogfacts.domain.external.FactWithUser;
-import lt.galdebar.dogfacts.services.Exceptions.FailedToRetrieveResource;
-import lt.galdebar.dogfacts.services.adapters.FactWithDatesAdapter;
-import lt.galdebar.dogfacts.services.adapters.FactWithUserAdapter;
+import lt.galdebar.dogfacts.domain.QueuedFacts;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 
-import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+import static java.util.Objects.*;
+
 @Service
+@RequiredArgsConstructor
 public class FactService {
 
-    private final String DEFAULT_URL = "https://cat-fact.herokuapp.com/facts/";
-    private final String RANDOM_SUFFIX = "random";
-    private final String ANIMAL_TYPE_PARAMETER = "?animal_type=dog";
-    private final String AMOUNT_PARAMETER = "&amount=";
-    private final Integer MAX_RESPONSE_COUNT = 500;
+    private static final String DEFAULT_URL = "https://cat-fact.herokuapp.com/facts";
+    private static final String RANDOM_SUFFIX = "/random";
+    private static final String QUERY_DOG = "?animal_type=dog";
+    private static final String QUERY_AMOUNT = "&amount=";
+    private static final Integer MAX_RESPONSE_COUNT = 500;
 
-    @Autowired
-    private RestTemplate restTemplate;
-
-    @Autowired
-    private ObjectMapper objectMapper;
-
-    private final FactWithDatesAdapter factWithDatesAdapter = new FactWithDatesAdapter();
-    private final FactWithUserAdapter factWithUserAdapter = new FactWithUserAdapter();
+    private final RestTemplate restTemplate;
 
 
-    public List<Fact> getQueuedFacts() throws FailedToRetrieveResource, IOException {
-        List<FactWithUser> factsToReturn = new ArrayList<>();
+    public List<Fact> getQueuedFacts() {
 
-        ResponseEntity<String> responseString = restTemplate.getForEntity(
-                DEFAULT_URL + ANIMAL_TYPE_PARAMETER,
-                String.class
+        ResponseEntity<QueuedFacts> response = restTemplate.getForEntity(
+                DEFAULT_URL + "/" + QUERY_DOG,
+                QueuedFacts.class
         );
-
-        checkIfFalid(responseString);
-
-        JsonNode responseNode = objectMapper.readTree(responseString.getBody());
-        ObjectReader reader = objectMapper.readerFor(new TypeReference<List<FactWithUser>>() {
-        });
-        factsToReturn = reader.readValue(responseNode.get("all"));
-
-        return factWithUserAdapter.convertToFact(factsToReturn);
+        requireNonNull(response);
+        return response.getBody().getAll();
     }
 
 
-    public Fact getRandomFact() throws FailedToRetrieveResource {
-        FactWithDates factWithDates = restTemplate.getForObject(DEFAULT_URL + RANDOM_SUFFIX + ANIMAL_TYPE_PARAMETER, FactWithDates.class);
-        checkIfFalid(factWithDates);
-        return factWithDatesAdapter.convertToFact(factWithDates);
+    public Fact getRandomFact() {
+        Fact response = restTemplate.getForObject(
+                DEFAULT_URL + RANDOM_SUFFIX + QUERY_DOG,
+                Fact.class
+        );
+        requireNonNull(response);
+        return response;
     }
 
-    public List<Fact> getRandomFact(Integer amount) throws FailedToRetrieveResource {
-        if (amount <= 1) {
+    public List<Fact> getRandomFact(Integer amount) {
+        if (amount == null || amount <= 1) {
             return List.of(getRandomFact());
         }
         if (amount >= MAX_RESPONSE_COUNT) {
@@ -76,27 +59,28 @@ public class FactService {
         return getRandomList(amount);
     }
 
-    public Fact getFactByID(String factID) throws FailedToRetrieveResource {
-        FactWithDates retrievedFactWithDates = restTemplate.getForObject(DEFAULT_URL + factID, FactWithDates.class);
-        checkIfFalid(retrievedFactWithDates);
-        return factWithDatesAdapter.convertToFact(retrievedFactWithDates);
-    }
-
-    private List<Fact> getRandomList(Integer amount) throws FailedToRetrieveResource {
-        ResponseEntity<FactWithDates[]> responseEntity = restTemplate.getForEntity(
-                DEFAULT_URL + RANDOM_SUFFIX + ANIMAL_TYPE_PARAMETER + AMOUNT_PARAMETER + amount,
-                FactWithDates[].class
-        );
-        checkIfFalid(responseEntity);
-        FactWithDates[] factsWithDates = responseEntity.getBody();
-        return factWithDatesAdapter.convertToFact(
-                Arrays.asList(factsWithDates)
-        );
-    }
-
-    private void checkIfFalid(Object object) throws FailedToRetrieveResource {
-        if(object == null){
-            throw new FailedToRetrieveResource();
+    public Fact getFactByID(String factID) {
+        Fact fact = null;
+        try {
+            fact = restTemplate.getForObject(
+                    DEFAULT_URL + "/" + factID,
+                    Fact.class
+            );
+        } catch (HttpClientErrorException e){
+            if(e.getStatusCode() == HttpStatus.BAD_REQUEST){
+                throw new FactNotFound("Incorrect fact id: " + factID);
+            }
         }
+        requireNonNull(fact);
+        return fact;
+    }
+
+    private List<Fact> getRandomList(Integer amount) {
+        ResponseEntity<Fact[]> responseEntity = restTemplate.getForEntity(
+                DEFAULT_URL + RANDOM_SUFFIX + QUERY_DOG + QUERY_AMOUNT + amount,
+                Fact[].class
+        );
+        requireNonNull(responseEntity);
+        return Arrays.asList(responseEntity.getBody());
     }
 }

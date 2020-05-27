@@ -2,8 +2,6 @@ package lt.galdebar.dogfacts.controllers;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lt.galdebar.dogfacts.domain.Fact;
-import lt.galdebar.dogfacts.domain.external.FactWithDates;
-import lt.galdebar.dogfacts.domain.external.FactWithUser;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -15,6 +13,7 @@ import java.util.Random;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest
@@ -56,6 +55,7 @@ class FactControllerTest {
         assertNotNull(response);
         assertTrue(!response.trim().isEmpty());
         assertNotNull(actualFact);
+//        assertTrue(actualFact.length == 1);
         assertTrue(!actualFact.getText().trim().isEmpty());
     }
 
@@ -82,12 +82,13 @@ class FactControllerTest {
                 .andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString();
 
-        Fact actualFactWithDates = objectMapper.readValue(response, Fact.class);
+        Fact[] actualFacts = objectMapper.readValue(response, Fact[].class);
 
         assertNotNull(response);
         assertTrue(!response.trim().isEmpty());
-        assertNotNull(actualFactWithDates);
-        assertTrue(!actualFactWithDates.getText().trim().isEmpty());
+        assertNotNull(actualFacts);
+        assertTrue(actualFacts.length == 1);
+        assertTrue(!actualFacts[0].getText().trim().isEmpty());
     }
 
     @Test
@@ -117,8 +118,9 @@ class FactControllerTest {
                 Fact.class
         );
 
-        String response = mockMvc.perform(get("/facts/" + expectedFact.get_id()))
+        String response = mockMvc.perform(get("/facts/" + expectedFact.getId()))
                 .andExpect(status().isOk())
+                .andDo(print())
                 .andReturn().getResponse().getContentAsString();
 
         Fact actualFact = objectMapper.readValue(response, Fact.class);
@@ -131,22 +133,8 @@ class FactControllerTest {
     public void givenInvalidID_whenGetFactByID_thenReturnNotFound() throws Exception {
         String invalidID = "09awoidhawd";
 
-        mockMvc.perform(get("/facts" + invalidID))
+        mockMvc.perform(get("/facts/" + invalidID))
                 .andExpect(status().isNotFound());
-    }
-
-    @Test
-    public void givenBlankID_whenGetFactByID_thenReturnRandomFact() throws Exception {
-        String response = mockMvc.perform(get("/facts/" + "    "))
-                .andExpect(status().isOk())
-                .andReturn().getResponse().getContentAsString();
-
-        FactWithDates actualFact = objectMapper.readValue(response, FactWithDates.class);
-
-        assertNotNull(response);
-        assertTrue(!response.trim().isEmpty());
-        assertNotNull(actualFact);
-        assertTrue(!actualFact.getText().trim().isEmpty());
     }
 
 }

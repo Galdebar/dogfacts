@@ -1,6 +1,6 @@
 package lt.galdebar.dogfacts.domain;
 
-import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -10,10 +10,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 public class Fact {
-    @JsonFormat(shape = JsonFormat.Shape.STRING)
-    private String _id;
-    @JsonFormat(shape = JsonFormat.Shape.STRING)
+    @JsonProperty("_id")
+    private String id;
     private String text;
-    @JsonFormat(shape = JsonFormat.Shape.STRING)
-    private String userID;
 }
