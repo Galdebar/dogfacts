@@ -1,4 +1,4 @@
-package lt.galdebar.dogfacts.services;
+package lt.galdebar.dogfacts.services.Exceptions;
 
 import org.springframework.web.bind.annotation.ResponseStatus;
 
