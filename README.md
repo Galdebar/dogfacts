@@ -35,13 +35,13 @@ Example request `GET /facts/5b12d7cccf4b960d5eb02ec7`
 It comes pre-packaged with Spring Started Web, so it integrates into the rest of the app automatically and already has error handling when consuming remote API out-of-the-box.
 It also allows easy object mapping.
 
-##Fact
+###Fact
 Since the requirement was to have easy-to-read facts, the Fact object is a heavily simplified version of the similar objects from the remote API. There's always room to expand if needed.
 
-##QueuedFact
+###QueuedFact
 Certain requests to the remote API produce specific response objects. To make object mapping easier, QueuedFact mimics that response object.
 An alternative way would be to parse the response into JsonNode object and then map it to a list of Fact objects, but it makes the code harder to read.
 
-##Integration Tests
+###Integration Tests
 Since the app is very simple, even integration tests run fairly fast, so I've decided to forego unit testing.
 
